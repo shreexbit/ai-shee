@@ -1,6 +1,61 @@
 import json
+import re
 
 from context import Context
+
+
+def parse_json_response(response):
+    """
+    Parse JSON returned by an LLM.
+
+    Accepts:
+    1. Plain JSON
+    2. JSON wrapped in ```json ... ```
+    3. JSON surrounded by small amounts of explanatory text
+
+    Returns:
+        Parsed JSON object or None if parsing fails.
+    """
+
+    if not response:
+        return None
+
+    response = response.strip()
+
+    # First try strict JSON.
+    try:
+        return json.loads(response)
+    except json.JSONDecodeError:
+        pass
+
+    # Remove markdown code fences.
+    fenced = re.search(
+        r"```(?:json)?\s*(.*?)\s*```",
+        response,
+        re.DOTALL | re.IGNORECASE
+    )
+
+    if fenced:
+        candidate = fenced.group(1).strip()
+
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            pass
+
+    # Try to locate a JSON object inside surrounding text.
+    start = response.find("{")
+    end = response.rfind("}")
+
+    if start != -1 and end > start:
+        candidate = response[start:end + 1]
+
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            pass
+
+    return None
 
 
 class ToolLoop:
@@ -13,18 +68,13 @@ class ToolLoop:
     ):
 
         self.llm = llm
-
         self.tool_executor = tool_executor
-
         self.max_steps = max_steps
-
         self.context = Context()
 
     def run(self, task):
 
-        self.context.set_task(
-            task
-        )
+        self.context.set_task(task)
 
         messages = [
 
@@ -109,16 +159,32 @@ there is a clear reason to do so.
                 response
             )
 
-            try:
+            decision = parse_json_response(
+                response
+            )
 
-                decision = json.loads(
-                    response
-                )
-
-            except json.JSONDecodeError:
+            if decision is None:
 
                 print(
                     "\nInvalid tool decision."
+                )
+
+                return {
+                    "success": False,
+                    "steps": step,
+                    "results":
+                        self.context.tool_history,
+                    "context":
+                        self.context.snapshot()
+                }
+
+            if not isinstance(
+                decision,
+                dict
+            ):
+
+                print(
+                    "\nInvalid decision format."
                 )
 
                 return {
@@ -176,6 +242,24 @@ there is a clear reason to do so.
                 "arguments",
                 {}
             )
+
+            if not isinstance(
+                arguments,
+                dict
+            ):
+
+                print(
+                    "\nInvalid tool arguments."
+                )
+
+                return {
+                    "success": False,
+                    "steps": step,
+                    "results":
+                        self.context.tool_history,
+                    "context":
+                        self.context.snapshot()
+                }
 
             print(
                 f"\nEXECUTING TOOL: "
@@ -274,7 +358,6 @@ there is a clear reason to do so.
 if __name__ == "__main__":
 
     from llm import LLM
-
     from agent import ToolExecutor
 
     llm = LLM()
