@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+*.ai-shee-backup
+.env
+.DS_Store
