@@ -737,10 +737,8 @@ class Agent:
             final_independent_result
         )
 
-        if not final_independent_result.get(
-            "success"
-        ):
-
+        if (not final_independent_result.get("skipped", False)
+            and not final_independent_result.get("success", False)):
             final_result["success"] = False
 
         if final_result.get(
