@@ -23,13 +23,11 @@ class LLM:
             )
 
             self.model = os.getenv(
-                "AI_MODEL",
-                "deepseek-flash"
+                "AI_MODEL"
             )
 
             self.base_url = os.getenv(
-                "AI_BASE_URL",
-                "https://api.deepseek.com"
+                "AI_BASE_URL"
             )
 
             if not self.api_key:
@@ -38,9 +36,24 @@ class LLM:
                     "AI_API_KEY is not set"
                 )
 
+            if not self.model:
+
+                raise RuntimeError(
+                    "AI_MODEL is not set"
+                )
+
+            client_kwargs = {
+                "api_key": self.api_key
+            }
+
+            if self.base_url:
+
+                client_kwargs["base_url"] = (
+                    self.base_url
+                )
+
             self.client = OpenAI(
-                api_key=self.api_key,
-                base_url=self.base_url
+                **client_kwargs
             )
 
     def generate(self, messages):
