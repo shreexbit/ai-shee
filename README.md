@@ -1,86 +1,131 @@
-AI-SHEE
-Autonomous Coding Harness
+Absolutely 😭 — the content is good, but the README should **look like a real hackathon project**, not a technical dump.
 
-AI-SHEE is an autonomous coding-agent harness focused on one goal:
+Copy this version directly:
 
-Don't stop when code is generated. Stop when there is evidence that it works.
+# 🧠 AI-SHEE
 
-It combines repository intelligence, tool use, context management, verification, and failure recovery.
+### Autonomous Coding Harness
 
-Architecture
-Issue
-  ↓
-Task Analysis
-  ↓
-Repository Map + Search
-  ↓
-Tool Loop
-  ↓
-Code Plan
-  ↓
-Apply Changes
-  ↓
-Verification
-  ↓
- ┌───────────────┐
- │               │
-PASS            FAIL
- │               │
- ↓               ↓
-DONE       Recovery Analysis
-                 ↓
-           Fresh Context
-                 ↓
-           Recovery Plan
-                 ↓
-              Verify
-Core Components
-Task Analyzer
+> **Don't stop when code is generated. Stop when there is evidence that it works.**
 
-Converts the issue into a structured goal, requirements, verification
-criteria, and search terms.
+AI-SHEE is an autonomous coding-agent harness that combines **repository intelligence, tool use, context management, verification, and failure recovery** to solve software engineering tasks.
 
-Repository Intelligence
+---
 
-Builds a lightweight repository map and ranks relevant code-search
-results so the model receives focused context.
+## ⚡ What AI-SHEE Does
 
-Tool Loop
+```text
+                    ┌──────────────┐
+                    │    ISSUE     │
+                    └──────┬───────┘
+                           ↓
+                  ┌─────────────────┐
+                  │  TASK ANALYSIS  │
+                  └────────┬────────┘
+                           ↓
+              ┌─────────────────────────┐
+              │ REPOSITORY INTELLIGENCE │
+              │  Map + Search + Context │
+              └────────────┬────────────┘
+                           ↓
+                    ┌─────────────┐
+                    │  TOOL LOOP  │
+                    │ Search/Read │
+                    │    /Run     │
+                    └──────┬──────┘
+                           ↓
+                    ┌─────────────┐
+                    │ CODE PLANNER│
+                    └──────┬──────┘
+                           ↓
+                    ┌─────────────┐
+                    │ APPLY CHANGE│
+                    └──────┬──────┘
+                           ↓
+                    ┌─────────────┐
+                    │ VERIFICATION│
+                    └──────┬──────┘
+                           ↓
+                     ┌─────┴─────┐
+                     │           │
+                   PASS         FAIL
+                     │           │
+                     ↓           ↓
+                   DONE      ┌──────────┐
+                             │ RECOVERY │
+                             │ ANALYSIS │
+                             └────┬─────┘
+                                  ↓
+                           FRESH CONTEXT
+                                  ↓
+                           RECOVERY PLAN
+                                  ↓
+                              VERIFY
+```
 
-The model can autonomously use:
+---
 
-search_code
-read_file
-run_command
+## 🚀 Key Capabilities
+
+### 🔍 Repository Intelligence
+
+AI-SHEE builds a lightweight repository map and searches for relevant
+code instead of blindly passing the entire repository to the model.
+
+### 🛠️ Autonomous Tool Loop
+
+The model can decide when to use:
+
+* `search_code`
+* `read_file`
+* `run_command`
 
 Tool history is bounded to keep context focused.
 
-Context Management
+### 🧠 Context Management
 
-Tracks relevant files, tool history, observations, changes, test results,
-and failed approaches.
+AI-SHEE tracks:
 
-During recovery, AI-SHEE re-reads the current repository state instead of
-reusing stale information from a failed attempt.
+* Relevant files
+* Tool history
+* Observations
+* Changes
+* Test results
+* Failed approaches
 
-Code Planner
+During recovery, it **re-reads the current repository state** instead of
+reusing stale information from the failed attempt.
 
-Produces structured changes containing the target file, operation, reason,
-and replacement or rewritten content.
+### 📝 Structured Code Planning
 
-For replacements, old_text must come from the current repository state.
+Every planned change contains:
 
-Verification & Recovery
+* Target file
+* Operation
+* Reason
+* Replacement or rewritten content
 
-AI-SHEE verifies changes after implementation.
+For replacements, `old_text` must come from the **current repository state**.
 
-If verification fails, the failure output is analyzed and used to generate a
-new recovery plan. The repository is then verified again.
+### ✅ Verification
 
-Demonstrated Recovery
+Code generation is not considered success.
 
-The included calculator example demonstrates:
+AI-SHEE verifies the resulting software and uses test results as evidence
+for subsequent decisions.
 
+### 🔄 Failure Recovery
+
+When verification fails, AI-SHEE analyzes the failure, creates a new plan,
+and retries using fresh repository context.
+
+---
+
+# 🧪 Recovery Demonstration
+
+The included calculator project demonstrates the complete recovery loop.
+
+```text
 Initial implementation
         ↓
 Local tests PASS
@@ -91,64 +136,131 @@ Failure analysis
         ↓
 Fresh repository context
         ↓
-Recovery
+Recovery plan
+        ↓
+Corrected implementation
         ↓
 Independent tests PASS
+```
 
-The demonstrated failure is division by zero: the initial implementation
-returns 0, while the independent evaluator requires ValueError.
+### Example
 
-Safety
-Controlled command execution
-Dangerous command/operator rejection
-Repository path validation
-Protected evaluator directories
-Exact text replacement
-Backups before modifications
-Configuration
+The initial implementation handled:
+
+```text
+divide(10, 0) → 0
+```
+
+The independent evaluator required:
+
+```text
+divide(10, 0) → ValueError
+```
+
+AI-SHEE detects the mismatch, analyzes the failure, rebuilds its recovery
+context, applies the corrected implementation, and verifies it again.
+
+Successful completion:
+
+```text
+✓ Local tests passed
+✓ Independent tests passed
+
+=== AI-SHEE SUCCESS ===
+```
+
+---
+
+# 🛡️ Safety
+
+AI-SHEE does not give unrestricted shell access to the model.
+
+It provides:
+
+* Controlled command execution
+* Dangerous command/operator rejection
+* Repository path validation
+* Protected evaluator directories
+* Exact text replacement
+* Backups before modifications
+
+---
+
+# ⚙️ Quick Start
+
+### Install
+
+```bash
+make setup
+```
+
+### Run
+
+```bash
+make run
+```
+
+### Test
+
+```bash
+make test
+```
+
+### Clean
+
+```bash
+make clean
+```
+
+---
+
+# 🧪 Local Independent Evaluator
+
+For the included deterministic demonstration:
+
+```bash
+export AI_MODE=mock
+export REPOSITORY_PATH=test_repo
+export INDEPENDENT_TEST_PATH=eval_tests
+
+make run
+```
+
+> **`INDEPENDENT_TEST_PATH` enables independent verification.**
+> Without it, independent verification is skipped.
+
+A successful run ends with:
+
+```text
+=== AI-SHEE SUCCESS ===
+```
+
+---
+
+# 🔌 Configuration
+
+```bash
 export REPOSITORY_PATH=/path/to/repository
 export ISSUE="Fix the authentication bug"
 export AI_MODE=real
 export AI_API_KEY="your-api-key"
 export AI_BASE_URL="your-api-base-url"
 export AI_MODEL="your-model"
+```
 
-No secrets are stored in the repository.
+**No API keys or secrets are stored in the repository.**
 
-Running
-make setup
-make run
-make test
-make clean
-Local Independent-Evaluator Demo
-export AI_MODE=mock
-export REPOSITORY_PATH=test_repo
-export INDEPENDENT_TEST_PATH=eval_tests
-make run
+---
 
-INDEPENDENT_TEST_PATH enables independent verification. Without it,
-independent verification is skipped.
+# 📦 Project Structure
 
-A successful run ends with:
-
-=== AI-SHEE SUCCESS ===
-Evaluation Interface
-
-The repository provides:
-
-make setup
-make run
-make test
-make clean
-
-The model configuration, repository, and issue can be supplied externally
-through environment variables.
-
-Project Structure
+```text
 ai-shee/
+│
 ├── Makefile
 ├── README.md
 ├── requirements.txt
+│
 ├── src/
 │   ├── main.py
 │   ├── llm.py
@@ -158,20 +270,50 @@ ai-shee/
 │   ├── verifier.py
 │   ├── recovery.py
 │   └── tool_loop.py
+│
 ├── eval_tests/
 │   └── test_calculator.py
+│
 └── test_repo/
     ├── calculator.py
     └── test_calculator.py
-Design Principles
+```
 
-Correctness First — verification is evidence of success.
+---
 
-Evidence Over Claims — tool and test results drive subsequent
-decisions.
+# 🧩 Design Principles
 
-Recovery Over Repetition — failures trigger analysis before retrying.
+| Principle                    | Approach                                    |
+| ---------------------------- | ------------------------------------------- |
+| **Correctness First**        | Code is successful only after verification  |
+| **Evidence Over Claims**     | Tool results and tests drive decisions      |
+| **Recovery Over Repetition** | Failures trigger analysis before retrying   |
+| **Fresh Context**            | Recovery uses the current repository state  |
+| **Focused Context**          | Relevant code is prioritized                |
+| **Safe Execution**           | Model actions pass through controlled tools |
 
-Focused Context — relevant repository information is prioritized.
+---
 
-Safe Tool Execution — model actions pass through controlled tools.
+# 🎯 The Core Idea
+
+AI-SHEE treats coding as a **closed-loop engineering process**:
+
+```text
+Understand
+    ↓
+Investigate
+    ↓
+Plan
+    ↓
+Change
+    ↓
+Verify
+    ↓
+Recover if necessary
+    ↓
+Verify again
+    ↓
+Finish
+```
+
+### **Generate less. Verify more.**
