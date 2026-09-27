@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 
 IGNORED_DIRECTORIES = {
@@ -450,6 +451,154 @@ def edit_file(
             "file": path,
             "message": str(error)
         }
+
+
+def replace_text(
+    path,
+    old_text,
+    new_text,
+    repository_path
+):
+
+    normalized_path = os.path.normpath(
+        path
+    )
+
+    repository_root = os.path.abspath(
+        repository_path
+    )
+
+    if os.path.isabs(normalized_path):
+
+        target_path = os.path.abspath(
+            normalized_path
+        )
+
+    else:
+
+        target_path = os.path.abspath(
+            os.path.join(
+                repository_root,
+                normalized_path
+            )
+        )
+
+    try:
+
+        relative_path = os.path.relpath(
+            target_path,
+            repository_root
+        )
+
+    except ValueError:
+
+        return {
+            "success": False,
+            "file": path,
+            "message": "Invalid file path"
+        }
+
+    if (
+        relative_path == "eval_tests"
+        or relative_path.startswith(
+            "eval_tests" + os.sep
+        )
+    ):
+
+        return {
+            "success": False,
+            "file": path,
+            "message": (
+                "Edit blocked: "
+                "protected evaluation file"
+            )
+        }
+
+    try:
+
+        common_path = os.path.commonpath(
+            [repository_root, target_path]
+        )
+
+    except ValueError:
+
+        return {
+            "success": False,
+            "file": path,
+            "message": "Edit blocked: invalid path"
+        }
+
+    if common_path != repository_root:
+
+        return {
+            "success": False,
+            "file": path,
+            "message": (
+                "Edit blocked: "
+                "file is outside repository"
+            )
+        }
+
+    if not os.path.isfile(target_path):
+
+        return {
+            "success": False,
+            "file": path,
+            "message": "File does not exist"
+        }
+
+    content = Path(target_path).read_text()
+
+    occurrences = content.count(
+        old_text
+    )
+
+    if occurrences == 0:
+
+        return {
+            "success": False,
+            "file": path,
+            "message": (
+                "Replacement text was not found"
+            )
+        }
+
+    if occurrences > 1:
+
+        return {
+            "success": False,
+            "file": path,
+            "message": (
+                "Replacement text is ambiguous: "
+                f"found {occurrences} matches"
+            )
+        }
+
+    backup_path = (
+        target_path + ".ai-shee-backup"
+    )
+
+    shutil.copy2(
+        target_path,
+        backup_path
+    )
+
+    updated_content = content.replace(
+        old_text,
+        new_text,
+        1
+    )
+
+    Path(target_path).write_text(
+        updated_content
+    )
+
+    return {
+        "success": True,
+        "file": path,
+        "message": "Text replacement applied",
+        "backup": backup_path
+    }
 
 
 def restore_file(path):

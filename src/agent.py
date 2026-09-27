@@ -7,6 +7,7 @@ from tools import (
     search_code,
     read_file,
     edit_file,
+    replace_text,
     run_command,
 )
 from context import Context
@@ -169,11 +170,67 @@ class ToolExecutor:
                 self.repository_path
             )
 
+        if tool == "replace_text":
+
+            path = arguments.get(
+                "path"
+            )
+
+            old_text = arguments.get(
+                "old_text"
+            )
+
+            new_text = arguments.get(
+                "new_text"
+            )
+
+            path = self._normalize_path(
+                path
+            )
+
+            if not path:
+
+                return {
+                    "success": False,
+                    "error":
+                        "Missing file path"
+                }
+
+            if old_text is None:
+
+                return {
+                    "success": False,
+                    "error":
+                        "Missing old_text"
+                }
+
+            if new_text is None:
+
+                return {
+                    "success": False,
+                    "error":
+                        "Missing new_text"
+                }
+
+            full_path = os.path.join(
+                self.repository_path,
+                path
+            )
+
+            return replace_text(
+                full_path,
+                old_text,
+                new_text,
+                self.repository_path
+            )
+
         return {
             "success": False,
             "error":
                 f"Unknown tool: {tool}"
         }
+
+
 
 
 class TaskAnalyzer:
@@ -273,8 +330,10 @@ Return ONLY valid JSON:
     "changes": [
         {{
             "file": "...",
+            "operation": "replace",
             "reason": "...",
-            "new_content": "..."
+            "old_text": "...",
+            "new_text": "..."
         }}
     ]
 }}
@@ -283,10 +342,18 @@ Rules:
 
 1. Only modify files relevant to the task.
 2. Preserve unrelated functionality.
-3. Use test evidence when available.
-4. If recovery information exists, fix
+3. Prefer "replace" when a precise existing
+   code fragment can be safely changed.
+4. For "replace", old_text MUST match exactly
+   one existing fragment in the file.
+5. Use "rewrite" only when a precise replacement
+   is not appropriate.
+6. For "rewrite", provide "new_content".
+7. Use test evidence when available.
+8. If recovery information exists, fix
    the previously identified failure.
-5. Include tests when appropriate.
+9. Include tests when appropriate.
+10. Never modify evaluator-owned files.
 """
 
         response = self.llm.generate(
@@ -312,6 +379,8 @@ Rules:
             return {
                 "changes": []
             }
+
+
 
 
 class Evaluator:
@@ -378,6 +447,111 @@ class Agent:
         self.tool_executor = ToolExecutor(
             repository_path
         )
+
+    def apply_change(self, change):
+
+        path = change.get(
+            "file"
+        )
+
+        if not path:
+            return {
+                "success": False,
+                "error": "Missing file"
+            }
+
+        repo_path = os.path.abspath(
+            self.repository_path
+        )
+
+        repo_name = os.path.basename(
+            repo_path
+        )
+
+        normalized_path = path.replace(
+            "\\",
+            "/"
+        )
+
+        repo_prefix = (
+            repo_name.rstrip("/")
+            + "/"
+        )
+
+        if normalized_path.startswith(
+            repo_prefix
+        ):
+            normalized_path = normalized_path[
+                len(repo_prefix):
+            ]
+
+        path = normalized_path
+
+        operation = change.get(
+            "operation",
+            "rewrite"
+        )
+
+        if operation == "replace":
+
+            old_text = change.get(
+                "old_text"
+            )
+
+            new_text = change.get(
+                "new_text"
+            )
+
+            if old_text is None or new_text is None:
+                return {
+                    "success": False,
+                    "file": path,
+                    "error":
+                        "Missing old_text or new_text"
+                }
+
+            full_path = os.path.join(
+                self.repository_path,
+                path
+            )
+
+            return replace_text(
+                full_path,
+                old_text,
+                new_text,
+                self.repository_path
+            )
+
+        if operation == "rewrite":
+
+            new_content = change.get(
+                "new_content"
+            )
+
+            if new_content is None:
+                return {
+                    "success": False,
+                    "file": path,
+                    "error": "Missing new_content"
+                }
+
+            full_path = os.path.join(
+                self.repository_path,
+                path
+            )
+
+            return edit_file(
+                full_path,
+                new_content,
+                self.repository_path
+            )
+
+        return {
+            "success": False,
+            "file": path,
+            "error":
+                f"Unknown change operation: {operation}"
+        }
 
     def investigate(self, issue):
 
@@ -539,20 +713,17 @@ class Agent:
             []
         ):
 
-            path = change["file"]
-
-            new_content = change[
-                "new_content"
-            ]
+            path = change.get(
+                "file",
+                "<unknown>"
+            )
 
             print(
                 f"\nApplying change: {path}"
             )
 
-            result = edit_file(
-                path,
-                new_content,
-                self.repository_path
+            result = self.apply_change(
+                change
             )
 
             print(
@@ -691,10 +862,17 @@ class Agent:
             []
         ):
 
-            result = edit_file(
-                change["file"],
-                change["new_content"],
-                self.repository_path
+            path = change.get(
+                "file",
+                "<unknown>"
+            )
+
+            print(
+                f"\\nApplying recovery change: {path}"
+            )
+
+            result = self.apply_change(
+                change
             )
 
             print(

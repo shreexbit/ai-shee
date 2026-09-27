@@ -182,13 +182,17 @@ class LLM:
     "changes": [
         {
             "file": "test_repo/calculator.py",
+            "operation": "replace",
             "reason": "Attempt to handle division by zero.",
-            "new_content": "def add(a, b):\\n    return a + b\\n\\n\\ndef divide(a, b):\\n    if b == 0:\\n        return 0\\n    return a / b\\n"
+            "old_text": "if b == 0:\\n        return 0",
+            "new_text": "if b == 0:\\n        return 0"
         },
         {
             "file": "test_repo/test_calculator.py",
+            "operation": "replace",
             "reason": "Add a regression test.",
-            "new_content": "from calculator import add, divide\\n\\n\\ndef test_add():\\n    assert add(2, 3) == 5\\n\\n\\ndef test_divide():\\n    assert divide(10, 2) == 5\\n\\n\\ndef test_divide_by_zero():\\n    assert divide(10, 0) == 0\\n"
+            "old_text": "def test_divide():\\n    assert divide(10, 2) == 5",
+            "new_text": "def test_divide():\\n    assert divide(10, 2) == 5\\n\\n\\ndef test_divide_by_zero():\\n    assert divide(10, 0) == 0"
         }
     ]
 }
@@ -199,13 +203,17 @@ class LLM:
     "changes": [
         {
             "file": "test_repo/calculator.py",
+            "operation": "replace",
             "reason": "Raise ValueError for division by zero.",
-            "new_content": "def add(a, b):\\n    return a + b\\n\\n\\ndef divide(a, b):\\n    if b == 0:\\n        raise ValueError(\\"Cannot divide by zero\\")\\n    return a / b\\n"
+            "old_text": "if b == 0:\\n        return 0",
+            "new_text": "if b == 0:\\n        raise ValueError(\\\"Cannot divide by zero\\\")"
         },
         {
             "file": "test_repo/test_calculator.py",
+            "operation": "replace",
             "reason": "Add a regression test for division by zero.",
-            "new_content": "from calculator import add, divide\\n\\n\\ndef test_add():\\n    assert add(2, 3) == 5\\n\\n\\ndef test_divide():\\n    assert divide(10, 2) == 5\\n\\n\\ndef test_divide_by_zero():\\n    try:\\n        divide(10, 0)\\n        assert False\\n    except ValueError:\\n        assert True\\n"
+            "old_text": "def test_divide():\\n    assert divide(10, 2) == 5\\n\\n\\ndef test_divide_by_zero():\\n    assert divide(10, 0) == 0",
+            "new_text": "def test_divide():\\n    assert divide(10, 2) == 5\\n\\n\\n\\ndef test_divide_by_zero():\\n    try:\\n        divide(10, 0)\\n        assert False\\n    except ValueError:\\n        assert True"
         }
     ]
 }
