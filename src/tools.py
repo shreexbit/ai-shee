@@ -300,7 +300,9 @@ def search_code(query, path="."):
         reverse=True
     )
 
-    return matches
+    # Keep only the strongest matches so repeated searches
+    # do not flood the model context.
+    return matches[:20]
 
 
 def read_file(
@@ -602,11 +604,26 @@ def run_command(
             timeout=timeout
         )
 
+        def compact_output(output, head=4000, tail=2000):
+            if not output:
+                return ""
+
+            limit = head + tail
+
+            if len(output) <= limit:
+                return output
+
+            return (
+                output[:head]
+                + "\n\n... [OUTPUT TRUNCATED FOR CONTEXT EFFICIENCY] ...\n\n"
+                + output[-tail:]
+            )
+
         return {
             "success": result.returncode == 0,
             "return_code": result.returncode,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
+            "stdout": compact_output(result.stdout),
+            "stderr": compact_output(result.stderr),
             "command": command
         }
 

@@ -508,12 +508,13 @@ class Agent:
             )
         )
 
+        investigation_results = investigation.get(
+            "results",
+            []
+        )
+
         terminal_context = {
-            "tool_history":
-                investigation.get(
-                    "results",
-                    []
-                )
+            "tool_history": investigation_results[-6:]
         }
 
         print(
