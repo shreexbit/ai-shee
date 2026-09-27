@@ -708,6 +708,9 @@ class Agent:
             )
         )
 
+        application_results = []
+        application_failed = False
+
         for change in plan.get(
             "changes",
             []
@@ -733,9 +736,24 @@ class Agent:
                 )
             )
 
+            application_results.append(
+                result
+            )
+
             self.context.add_change(
                 change
             )
+
+            if not result.get(
+                "success",
+                False
+            ):
+                application_failed = True
+
+                self.context.add_failed_approach(
+                    f"Change application failed for {path}: "
+                    f"{result.get('message') or result.get('error')}"
+                )
 
         print(
             "\n--- VERIFICATION ---"
@@ -750,6 +768,26 @@ class Agent:
                 test_result,
                 indent=2
             )
+        )
+
+        if application_failed:
+            test_result = {
+                **test_result,
+                "success": False,
+                "change_application_failed": True,
+                "application_results": application_results
+            }
+
+            print(
+                "\n--- CHANGE APPLICATION FAILED ---"
+            )
+
+            print(
+                "At least one planned change was not applied successfully."
+            )
+
+        self.context.add_test_result(
+            test_result
         )
 
         print(
@@ -857,6 +895,8 @@ class Agent:
             )
         )
 
+        recovery_application_failed = False
+
         for change in recovery_plan.get(
             "changes",
             []
@@ -881,6 +921,17 @@ class Agent:
                     indent=2
                 )
             )
+
+            if not result.get(
+                "success",
+                False
+            ):
+                recovery_application_failed = True
+
+                self.context.add_failed_approach(
+                    f"Recovery change failed for {path}: "
+                    f"{result.get('message') or result.get('error')}"
+                )
 
         print(
             "\n--- FINAL VERIFICATION ---"
@@ -915,6 +966,9 @@ class Agent:
         final_result["independent"] = (
             final_independent_result
         )
+
+        if recovery_application_failed:
+            final_result["success"] = False
 
         if (not final_independent_result.get("skipped", False)
             and not final_independent_result.get("success", False)):
