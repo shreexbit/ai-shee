@@ -25,10 +25,6 @@ implement the smallest correct change, and verify it with tests.
 
     result = agent.investigate(issue)
 
-    if result:
-        print("\n=== AI-SHEE SUCCESS ===")
-    else:
-        print("\n=== AI-SHEE FAILED ===")
 
 
 if __name__ == "__main__":
