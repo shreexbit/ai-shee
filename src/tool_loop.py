@@ -311,36 +311,40 @@ there is a clear reason to do so.
                 }
             )
 
-            context_snapshot = (
-                self.context.snapshot()
+            recent_history = (
+                self.context.get_recent_tool_history(
+                    limit=3
+                )
             )
+
+            memory = {
+                "task": self.context.task,
+                "hypothesis": self.context.hypothesis,
+                "relevant_files": self.context.relevant_files,
+                "failed_approaches": self.context.failed_approaches[-3:],
+                "observations": self.context.observations[-5:],
+                "recent_tool_history": recent_history
+            }
 
             messages.append(
                 {
                     "role": "user",
-
                     "content": (
-                        "Tool result:\n\n"
-
+                        "CURRENT TOOL RESULT:\n\n"
                         + json.dumps(
                             result,
                             indent=2
                         )
-
                         + "\n\n"
-
-                        "CURRENT AGENT MEMORY:\n\n"
-
+                        "RELEVANT MEMORY:\n\n"
                         + json.dumps(
-                            context_snapshot,
+                            memory,
                             indent=2
                         )
-
                         + "\n\n"
-
-                        "Use the accumulated "
-                        "evidence and decide "
-                        "your next action."
+                        "Use the evidence above to decide "
+                        "your next action. Avoid repeating "
+                        "previous tool calls unless necessary."
                     )
                 }
             )
