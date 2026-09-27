@@ -8,10 +8,8 @@ class LLM:
 
     def __init__(self):
 
-        self.mode = os.getenv(
-            "AI_MODE",
-            "mock"
-        )
+        self.mode = os.getenv("AI_MODE",
+            "real" if os.getenv("AI_API_KEY") else "mock")
 
         self.plan_calls = 0
         self.tool_calls = 0
