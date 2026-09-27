@@ -168,7 +168,9 @@ class LLM:
                     )
 
                 has_recovery_context = (
-                    "previous recovery information"
+                    "recovery information"
+                    in user_prompt
+                    or "previous recovery information"
                     in user_prompt
                 )
 
@@ -212,8 +214,8 @@ class LLM:
             "file": "test_repo/test_calculator.py",
             "operation": "replace",
             "reason": "Add a regression test for division by zero.",
-            "old_text": "def test_divide():\\n    assert divide(10, 2) == 5\\n\\n\\ndef test_divide_by_zero():\\n    assert divide(10, 0) == 0",
-            "new_text": "def test_divide():\\n    assert divide(10, 2) == 5\\n\\n\\n\\ndef test_divide_by_zero():\\n    try:\\n        divide(10, 0)\\n        assert False\\n    except ValueError:\\n        assert True"
+            "old_text": "def test_divide():\\n    assert divide(10, 2) == 5",
+            "new_text": "def test_divide():\\n    assert divide(10, 2) == 5\\n\\n\\ndef test_divide_by_zero():\\n    try:\\n        divide(10, 0)\\n        assert False\\n    except ValueError:\\n        assert True"
         }
     ]
 }

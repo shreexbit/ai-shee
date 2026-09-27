@@ -309,7 +309,7 @@ engineering task.
 TASK:
 {json.dumps(task, indent=2)}
 
-RELEVANT FILES:
+CURRENT FILES:
 {json.dumps(files, indent=2)}
 
 TERMINAL CONTEXT:
@@ -318,11 +318,33 @@ TERMINAL CONTEXT:
     indent=2
 )}
 
-PREVIOUS RECOVERY INFORMATION:
+RECOVERY INFORMATION:
 {json.dumps(
     recovery_context or {},
     indent=2
 )}
+
+IMPORTANT:
+The CURRENT FILES section is the authoritative
+source of truth for the repository state at this
+exact moment.
+
+Previous attempts may have modified files and then
+been rolled back. Do NOT assume that text from a
+previous attempt still exists.
+
+For every "replace" operation:
+
+- old_text MUST be copied verbatim from the
+  corresponding CURRENT FILES content.
+- old_text MUST exist exactly once in that file.
+- Do NOT construct old_text from a previous plan,
+  previous attempt, recovery history, or memory.
+- If the desired change is not safely expressible
+  as an exact replacement using text that appears
+  in CURRENT FILES, use "rewrite" instead.
+- Never include text in old_text that is not visibly
+  present in CURRENT FILES.
 
 Return ONLY valid JSON:
 
@@ -342,18 +364,18 @@ Rules:
 
 1. Only modify files relevant to the task.
 2. Preserve unrelated functionality.
-3. Prefer "replace" when a precise existing
-   code fragment can be safely changed.
-4. For "replace", old_text MUST match exactly
-   one existing fragment in the file.
-5. Use "rewrite" only when a precise replacement
-   is not appropriate.
-6. For "rewrite", provide "new_content".
-7. Use test evidence when available.
-8. If recovery information exists, fix
-   the previously identified failure.
-9. Include tests when appropriate.
-10. Never modify evaluator-owned files.
+3. Prefer "replace" when an exact existing fragment
+   from CURRENT FILES can be safely changed.
+4. For "replace", old_text MUST match exactly one
+   fragment shown in CURRENT FILES.
+5. For "rewrite", provide complete new_content.
+6. Use test evidence when available.
+7. If recovery information exists, fix the
+   previously identified failure.
+8. Include or update tests when appropriate.
+9. Never modify evaluator-owned files.
+10. The generated plan must be valid against the
+    CURRENT FILES without relying on stale state.
 """
 
         response = self.llm.generate(
@@ -361,7 +383,9 @@ Rules:
                 {
                     "role": "system",
                     "content":
-                        "You are a code-change planner."
+                        "You are a precise code-change planner. "
+                        "Treat the supplied current file contents "
+                        "as authoritative and never invent old_text."
                 },
                 {
                     "role": "user",
@@ -379,7 +403,6 @@ Rules:
             return {
                 "changes": []
             }
-
 
 
 
@@ -449,10 +472,7 @@ class Agent:
         )
 
     def apply_change(self, change):
-
-        path = change.get(
-            "file"
-        )
+        path = change.get("file")
 
         if not path:
             return {
@@ -465,7 +485,7 @@ class Agent:
         )
 
         repo_name = os.path.basename(
-            repo_path
+            repo_path.rstrip(os.sep)
         )
 
         normalized_path = path.replace(
@@ -481,9 +501,11 @@ class Agent:
         if normalized_path.startswith(
             repo_prefix
         ):
-            normalized_path = normalized_path[
-                len(repo_prefix):
-            ]
+            normalized_path = (
+                normalized_path[
+                    len(repo_prefix):
+                ]
+            )
 
         path = normalized_path
 
@@ -511,7 +533,7 @@ class Agent:
                 }
 
             full_path = os.path.join(
-                self.repository_path,
+                repo_path,
                 path
             )
 
@@ -519,7 +541,7 @@ class Agent:
                 full_path,
                 old_text,
                 new_text,
-                self.repository_path
+                repo_path
             )
 
         if operation == "rewrite":
@@ -532,18 +554,19 @@ class Agent:
                 return {
                     "success": False,
                     "file": path,
-                    "error": "Missing new_content"
+                    "error":
+                        "Missing new_content"
                 }
 
             full_path = os.path.join(
-                self.repository_path,
+                repo_path,
                 path
             )
 
             return edit_file(
                 full_path,
                 new_content,
-                self.repository_path
+                repo_path
             )
 
         return {
@@ -554,10 +577,6 @@ class Agent:
         }
 
     def investigate(self, issue):
-
-        print(
-            "\n=== AI-SHEE START ==="
-        )
 
         analysis = self.analyzer.analyze(
             issue
@@ -877,14 +896,79 @@ class Agent:
             recovery_info
         )
 
+        # Refresh repository state after rollback.
+        # Recovery must plan against the files that
+        # actually exist now, not the stale pre-edit snapshot.
+
+        fresh_files = {}
+
+        recovery_terms = recovery_info.get(
+            "search_terms",
+            analysis.get("search_terms", [])
+        )
+
+        fresh_ranked = []
+
+        for term in recovery_terms:
+
+            results = search_code(
+                term,
+                self.repository_path
+            )
+
+            fresh_ranked.extend(
+                results
+            )
+
+        fresh_ranked.sort(
+            key=lambda x:
+                x.get("score", 0),
+            reverse=True
+        )
+
+        fresh_selected = []
+
+        for item in fresh_ranked:
+
+            path = item["file"]
+
+            if path not in fresh_selected:
+                fresh_selected.append(path)
+
+            if len(fresh_selected) >= 5:
+                break
+
+        for path in fresh_selected:
+
+            fresh_files[path] = read_file(
+                path
+            )
+
+        print(
+            "\n--- FRESH RECOVERY CONTEXT ---"
+        )
+
+        print(
+            json.dumps(
+                fresh_files,
+                indent=2
+            )
+        )
+
+        fresh_terminal_context = {
+            "tool_history": (
+                investigation_results[-6:]
+            )
+        }
+
         print(
             "\n--- RECOVERY PLAN ---"
         )
 
         recovery_plan = self.planner.plan(
             analysis,
-            files,
-            terminal_context,
+            fresh_files,
+            fresh_terminal_context,
             recovery_info
         )
 
